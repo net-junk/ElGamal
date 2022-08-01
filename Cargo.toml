@@ -1,0 +1,38 @@
+[package]
+name = "elgamal"
+version = "0.1.0"
+edition = "2021"
+authors = ["kusok <ovsyanka@protonmail.com>"]
+description = "Pure Rust RSA implementation"
+keywords = ["elgamal", "encryption", "decryption", "crypto"]
+categories = ["cryptography"]
+readme = "README.md"
+rust-version = "1.62.0"
+
+[dependencies]
+num-bigint = { version = "0.8.1", features = ["i128", "u64_digit", "prime", "zeroize"], default-features = false, package = "num-bigint-dig" }
+num-traits = { version= "0.2.9", default-features = false, features = ["libm"] }
+num-integer = { version = "0.1.39", default-features = false }
+num-iter = { version = "0.1.37", default-features = false }
+rand_core = { version = "0.6", default-features = false }
+digest = { version = "0.10.3", default-features = false, features = ["alloc"] }
+serde = { version = "1.0.140", optional = true,  features= ["derive"] }
+
+
+
+[dev-dependencies]
+rand = { version = "0.8" }
+sha2 = { version = "0.10.2", default-features = false }
+
+
+[features]
+default = ["std"]
+serdesup = ["num-bigint/serde", "serde"]
+std = ["digest/std", "serde"]
+
+[package.metadata.docs.rs]
+features = ["std", "pem", "serde"]
+rustdoc-args = ["--cfg", "docsrs"]
+
+[profile.dev]
+opt-level = 2
