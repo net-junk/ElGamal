@@ -5,8 +5,7 @@ use num_traits::One;
 use rand_core::{CryptoRng, RngCore};
 
 use crate::error::{Error, Result};
-use crate::keys::ElgamalPrivateKey;
-use crate::keys::ElgamalPublicKeyParts;
+use crate::keys::{ElgamalPrivateKey, ElgamalPublicKey, ElgamalGroup, ElgamalGroupElements};
 
 use digest::DynDigest;
 
@@ -36,9 +35,9 @@ fn decrypt_raw(a: &BigUint, b: &BigUint, p: &BigUint, x: &BigUint) -> Result<Big
 }
 
 #[inline]
-pub fn encrypt<K: ElgamalPublicKeyParts, R: RngCore + CryptoRng>(
+pub fn encrypt<R: RngCore + CryptoRng>(
     rng: &mut R,
-    key: &K,
+    key: &ElgamalPublicKey,
     m: &BigUint,
 ) -> (BigUint, BigUint) {
     let r = rng.gen_biguint_range(&BigUint::one(), key.get_q());
@@ -48,9 +47,9 @@ pub fn encrypt<K: ElgamalPublicKeyParts, R: RngCore + CryptoRng>(
 }
 
 #[inline]
-pub fn reencrypt<K: ElgamalPublicKeyParts, R: RngCore + CryptoRng>(
+pub fn reencrypt<R: RngCore + CryptoRng>(
     rng: &mut R,
-    key: &K,
+    key: &ElgamalPublicKey,
     a: &BigUint,
     b: &BigUint,
 ) -> (BigUint, BigUint) {
@@ -68,8 +67,8 @@ pub fn decrypt(key: &ElgamalPrivateKey, a: &BigUint, b: &BigUint) -> Result<BigU
 }
 
 #[inline]
-pub fn verify<K: ElgamalPublicKeyParts>(
-    key: &K,
+pub fn verify(
+    key: &ElgamalPublicKey,
     h: &BigUint,
     r: &BigUint,
     s: &BigUint,
@@ -104,8 +103,7 @@ pub fn sign<R: RngCore + CryptoRng>(
         .unwrap();
 
     let s1 = (key.get_x() * &r) % q;
-    let s = match s1 > *h
-    {
+    let s = match s1 > *h {
         true => (reverse_k * (q + h - s1)) % q,
         false => (reverse_k * (h - s1)) % q,
     };
@@ -115,10 +113,10 @@ pub fn sign<R: RngCore + CryptoRng>(
 
 /// Non-Malleable El Gamal Encryption
 #[inline]
-pub fn non_malleable_encrypt<K: ElgamalPublicKeyParts, R: RngCore + CryptoRng>(
+pub fn non_malleable_encrypt<R: RngCore + CryptoRng>(
     rng: &mut R,
     digest: &mut dyn DynDigest,
-    key: &K,
+    key: &ElgamalPublicKey,
     m: &BigUint,
 ) -> (BigUint, BigUint, BigUint, BigUint) {
     let r = rng.gen_biguint_range(&BigUint::one(), key.get_q());
@@ -127,7 +125,6 @@ pub fn non_malleable_encrypt<K: ElgamalPublicKeyParts, R: RngCore + CryptoRng>(
     let g = key.get_g();
     let p = key.get_p();
     let q = key.get_q();
-
 
     let (a, b) = encrypt_raw(m, p, key.get_y(), g, &r);
 
@@ -192,7 +189,7 @@ mod test {
 
     use super::*;
     use crate::{
-        algorithms::{elgamal_parameter_generation_type1, key_generation},
+        algorithms::{key_generation, elgamal_parameter_generation_type1},
         keys::{ElgamalPrivateKey, ElgamalPublicKey},
     };
 
@@ -201,10 +198,11 @@ mod test {
         l: usize,
         k: usize,
     ) -> (ElgamalPublicKey, ElgamalPrivateKey) {
-        let (q, p, g) = elgamal_parameter_generation_type1(rng, l, k);
-        let (y, x) = key_generation(rng, &p, &q, &g);
-        let pubkey = ElgamalPublicKey::new(p, q, g, y);
-        let privatekey = ElgamalPrivateKey::new(pubkey.clone(), x);
+        let (q,p, g) = elgamal_parameter_generation_type1(rng, l, k);
+        let group = ElgamalGroup::new(p,q, g);
+        let (y, x) = key_generation(rng, &group);
+        let pubkey = ElgamalPublicKey::new(group.clone(), y);
+        let privatekey = ElgamalPrivateKey::new(group, x, None);
 
         (pubkey, privatekey)
     }
@@ -261,7 +259,7 @@ mod test {
         let l = 70;
         let k = 4;
         let mut rng = StdRng::from_entropy();
-        
+
         let (pub_key, priv_key) = generate_key(&mut rng, l, k);
         let plain_text = rng.gen_biguint_range(&BigUint::one(), pub_key.get_p());
 

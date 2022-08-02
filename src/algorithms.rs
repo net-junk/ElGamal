@@ -6,6 +6,9 @@ use rand_core::{CryptoRng, RngCore};
 
 use num_iter::range;
 
+use crate::ElgamalGroup;
+use crate::keys::ElgamalGroupElements;
+
 pub(crate) fn generate_prime<R: RngCore + CryptoRng>(rng: &mut R, bit_size: usize) -> BigUint {
     rng.gen_prime(bit_size)
 }
@@ -58,7 +61,7 @@ pub(crate) fn generate_prime<R: RngCore + CryptoRng>(rng: &mut R, bit_size: usiz
 //     }
 // }
 
-pub fn elgamal_parameter_generation_type1<R: RngCore + CryptoRng>(
+pub(crate) fn elgamal_parameter_generation_type1<R: RngCore + CryptoRng>(
     rng: &mut R,
     l: usize,
     k: usize,
@@ -100,13 +103,11 @@ pub fn elgamal_parameter_generation_type1<R: RngCore + CryptoRng>(
 
 pub fn key_generation<R: RngCore + CryptoRng>(
     rng: &mut R,
-    p: &BigUint,
-    q: &BigUint,
-    g: &BigUint,
+    group: &ElgamalGroup,
 ) -> (BigUint, BigUint) {
-    let x = rng.gen_biguint_range(&BigUint::one(), q);
+    let x = rng.gen_biguint_range(&BigUint::one(), group.get_q());
 
-    (g.modpow(&x, p), x)
+    (group.get_g().modpow(&x, group.get_p()), x)
 }
 
 #[cfg(test)]
@@ -120,6 +121,6 @@ mod tests {
     fn elgamal_gen_1() {
         let mut rng = StdRng::from_entropy();
 
-        let (q, p, g) = elgamal_parameter_generation_type1(&mut rng, 5, 3);
+        let (_q, _p, _g) = elgamal_parameter_generation_type1(&mut rng, 5, 3);
     }
 }

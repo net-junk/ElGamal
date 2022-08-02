@@ -18,6 +18,7 @@ rand_core = { version = "0.6", default-features = false }
 digest = { version = "0.10.3", default-features = false, features = ["alloc"] }
 serde = { version = "1.0.140", optional = true,  features= ["derive"] }
 
+der = { version = "0.6.0", features = ["oid", "derive", "alloc"] }
 
 
 [dev-dependencies]

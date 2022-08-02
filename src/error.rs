@@ -10,6 +10,9 @@ pub enum Error {
     InvalidInverse,
     InvalidRange,
     InvalidData,
+    InvalidOID,
+    PrivateKeyMalformed,
+    PublicKeyMalformed,
 }
 
 #[cfg(feature = "std")]
@@ -23,6 +26,9 @@ impl core::fmt::Display for Error {
             Error::InvalidRange => write!(f, "integer not in range"),
             Error::MessageTooLong => write!(f, "message too long"),
             Error::InvalidData => write!(f, "invalid data"),
+            Error::InvalidOID => write!(f, "invalid OID"),
+            Error::PrivateKeyMalformed => write!(f, "private key is malformed"),
+            Error::PublicKeyMalformed => write!(f, "public key is malformed"),
         }
     }
 }

@@ -4,13 +4,14 @@ use rand_core::{CryptoRng, RngCore};
 #[cfg(feature = "serdesup")]
 use serde::{Deserialize, Serialize};
 
+use crate::algorithms::elgamal_parameter_generation_type1;
+use crate::algorithms::key_generation;
 use crate::error::*;
 use crate::internal::*;
 
-pub trait ElgamalPublicKeyParts {
+pub trait ElgamalGroupElements {
     fn get_p(&self) -> &BigUint;
     fn get_q(&self) -> &BigUint;
-    fn get_y(&self) -> &BigUint;
     fn get_g(&self) -> &BigUint;
 }
 
@@ -20,9 +21,7 @@ pub trait ElgamalPublicKeyParts {
     derive(Serialize, Deserialize),
     serde(crate = "serde")
 )]
-pub struct ElgamalPublicKey {
-    /// y = g^x
-    y: BigUint,
+pub struct ElgamalGroup {
     /// Generator of cyclic group G
     g: BigUint,
     /// Order of cyclic group G
@@ -37,14 +36,29 @@ pub struct ElgamalPublicKey {
     derive(Serialize, Deserialize),
     serde(crate = "serde")
 )]
-pub struct ElgamalPrivateKey {
-    /// Public components of the private key.
-    pubkey_components: ElgamalPublicKey,
-    /// Private exponent
-    pub(crate) x: BigUint,
+pub struct ElgamalPublicKey {
+    /// y = g^x
+    pub(crate)  y: BigUint,
+    /// ElGamal Group
+    group: ElgamalGroup,
 }
 
-impl ElgamalPublicKeyParts for ElgamalPublicKey {
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serdesup",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde")
+)]
+pub struct ElgamalPrivateKey {
+    /// Private exponent
+    pub(crate) x: BigUint,
+    /// ElGamal Group
+    group: ElgamalGroup,
+    /// Public Key
+    public: Option<ElgamalPublicKey>,
+}
+
+impl ElgamalGroupElements for ElgamalGroup {
     fn get_p(&self) -> &BigUint {
         &self.p
     }
@@ -56,24 +70,53 @@ impl ElgamalPublicKeyParts for ElgamalPublicKey {
     fn get_g(&self) -> &BigUint {
         &self.g
     }
+}
 
-    fn get_y(&self) -> &BigUint {
-        &self.y
+impl ElgamalGroupElements for ElgamalPublicKey {
+    fn get_p(&self) -> &BigUint {
+        self.group.get_p()
     }
+
+    fn get_q(&self) -> &BigUint {
+        self.group.get_q()
+    }
+
+    fn get_g(&self) -> &BigUint {
+        self.group.get_g()
+    }
+}
+
+impl ElgamalGroup
+{
+    pub fn new(p: BigUint, q: BigUint, g: BigUint) -> Self
+    {
+        Self { g, p, q}
+    }
+
+    pub fn generate<R: RngCore + CryptoRng>(
+        rng: &mut R,
+        l: usize,
+        k: usize) -> Self
+        {
+            let (q, p, g) = elgamal_parameter_generation_type1(rng, l, k);
+            ElgamalGroup::new(p, q, g)      
+        }
 }
 
 impl ElgamalPublicKey {
-    pub fn new(p: BigUint, q: BigUint, g: BigUint, y: BigUint) -> Self {
-        Self { g, p, q, y }
+    pub fn new(group: ElgamalGroup, y: BigUint) -> Self {
+        Self { group, y }
     }
+
+        /// Returns the private exponent of the key.
+        pub fn get_y(&self) -> &BigUint {
+            &self.y
+        }
 }
 
 impl ElgamalPrivateKey {
-    pub fn new(pubkey: ElgamalPublicKey, x: BigUint) -> Self {
-        Self {
-            pubkey_components: pubkey,
-            x,
-        }
+    pub fn new(group: ElgamalGroup, x: BigUint, public: Option<ElgamalPublicKey>) -> Self {
+        Self { group, x, public}
     }
 
     /// Returns the private exponent of the key.
@@ -82,40 +125,36 @@ impl ElgamalPrivateKey {
     }
 
     /// Returns the public key.
-    pub fn public(&self) -> &ElgamalPublicKey {
-        &self.pubkey_components
+    pub fn public(&self) -> Option<&ElgamalPublicKey> {
+        self.public.as_ref()
     }
 }
 
-impl ElgamalPublicKeyParts for ElgamalPrivateKey {
+impl ElgamalGroupElements for ElgamalPrivateKey {
     fn get_p(&self) -> &BigUint {
-        self.public().get_p()
+        self.group.get_p()
     }
 
     fn get_q(&self) -> &BigUint {
-        self.public().get_q()
+        self.group.get_q()
     }
 
     fn get_g(&self) -> &BigUint {
-        self.public().get_g()
-    }
-
-    fn get_y(&self) -> &BigUint {
-        self.public().get_y()
+        self.group.get_g()
     }
 }
 
-impl From<ElgamalPrivateKey> for ElgamalPublicKey {
-    fn from(private_key: ElgamalPrivateKey) -> Self {
-        private_key.pubkey_components
-    }
-}
+// impl From<ElgamalPrivateKey> for ElgamalPublicKey {
+//     fn from(private_key: ElgamalPrivateKey) -> Self {
+//         private_key.public
+//     }
+// }
 
-impl From<&ElgamalPrivateKey> for ElgamalPublicKey {
-    fn from(private_key: &ElgamalPrivateKey) -> Self {
-        private_key.pubkey_components.clone()
-    }
-}
+// impl From<&ElgamalPrivateKey> for ElgamalPublicKey {
+//     fn from(private_key: &ElgamalPrivateKey) -> Self {
+//         private_key.public.clone()
+//     }
+// }
 
 impl ElgamalPublicKey {
     /// Encrypt the given message.
@@ -184,4 +223,13 @@ impl ElgamalPrivateKey {
 
         Ok(s)
     }
+}
+
+pub fn elgamal_key_generate<R: RngCore + CryptoRng>(
+    rng: &mut R,
+    group: &ElgamalGroup,
+) -> (ElgamalPublicKey, ElgamalPrivateKey) {
+    let (y,x) = key_generation(rng, group);
+
+    (ElgamalPublicKey::new(group.clone(), y), ElgamalPrivateKey::new(group.clone(), x, None))
 }
