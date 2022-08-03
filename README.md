@@ -13,8 +13,10 @@ Currently project is at Phase 1
     - [x] Default algorithms of Encryption, Decription, Verification, Signing
     - [x] Algorimts of keys generation
     - [ ] Validation
-    - [ ] Formats of keys 
+    - [partial] Formats of keys 
     - [ ] Key import & export
+    - [ ] Support of eleptic curve
+
 2. Make it fast
     - [ ] Benchmarks
     - [ ] Optimization

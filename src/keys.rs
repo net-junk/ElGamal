@@ -38,7 +38,7 @@ pub struct ElgamalGroup {
 )]
 pub struct ElgamalPublicKey {
     /// y = g^x
-    pub(crate)  y: BigUint,
+    pub(crate) y: BigUint,
     /// ElGamal Group
     group: ElgamalGroup,
 }
@@ -86,21 +86,15 @@ impl ElgamalGroupElements for ElgamalPublicKey {
     }
 }
 
-impl ElgamalGroup
-{
-    pub fn new(p: BigUint, q: BigUint, g: BigUint) -> Self
-    {
-        Self { g, p, q}
+impl ElgamalGroup {
+    pub fn new(p: BigUint, q: BigUint, g: BigUint) -> Self {
+        Self { g, p, q }
     }
 
-    pub fn generate<R: RngCore + CryptoRng>(
-        rng: &mut R,
-        l: usize,
-        k: usize) -> Self
-        {
-            let (q, p, g) = elgamal_parameter_generation_type1(rng, l, k);
-            ElgamalGroup::new(p, q, g)      
-        }
+    pub fn generate<R: RngCore + CryptoRng>(rng: &mut R, l: usize, k: usize) -> Self {
+        let (q, p, g) = elgamal_parameter_generation_type1(rng, l, k);
+        ElgamalGroup::new(p, q, g)
+    }
 }
 
 impl ElgamalPublicKey {
@@ -108,15 +102,15 @@ impl ElgamalPublicKey {
         Self { group, y }
     }
 
-        /// Returns the private exponent of the key.
-        pub fn get_y(&self) -> &BigUint {
-            &self.y
-        }
+    /// Returns the private exponent of the key.
+    pub fn get_y(&self) -> &BigUint {
+        &self.y
+    }
 }
 
 impl ElgamalPrivateKey {
     pub fn new(group: ElgamalGroup, x: BigUint, public: Option<ElgamalPublicKey>) -> Self {
-        Self { group, x, public}
+        Self { group, x, public }
     }
 
     /// Returns the private exponent of the key.
@@ -158,7 +152,7 @@ impl ElgamalGroupElements for ElgamalPrivateKey {
 
 impl ElgamalPublicKey {
     /// Encrypt the given message.
-    fn encrypt<R: RngCore + CryptoRng>(&self, rng: &mut R, msg: &[u8]) -> Result<Vec<u8>> {
+    pub fn encrypt<R: RngCore + CryptoRng>(&self, rng: &mut R, msg: &[u8]) -> Result<Vec<u8>> {
         let m = BigUint::from_bytes_be(msg);
         if m.bits() > self.get_p().bits() {
             return Err(Error::MessageTooLong);
@@ -176,7 +170,7 @@ impl ElgamalPublicKey {
     /// `hashed`must be the result of hashing the input using the hashing function
     /// passed in through `hash`.
     /// If the message is valid `Ok(())` is returned, otherwiese an `Err` indicating failure.
-    fn verify(&self, hashed: &[u8], sig: &[u8]) -> Result<()> {
+    pub fn verify(&self, hashed: &[u8], sig: &[u8]) -> Result<()> {
         if sig.len() % 2 != 0 {
             return Err(Error::InvalidData);
         }
@@ -209,7 +203,7 @@ impl ElgamalPrivateKey {
     /// Signe message.
     /// `hashed` must be the result of hashing the input using the hashing function
     /// passed in through `hash`.
-    fn sign<R: RngCore + CryptoRng>(&self, rng: &mut R, hashed: &[u8]) -> Result<Vec<u8>> {
+    pub fn sign<R: RngCore + CryptoRng>(&self, rng: &mut R, hashed: &[u8]) -> Result<Vec<u8>> {
         let h = BigUint::from_bytes_be(hashed);
         if h.bits() > self.get_p().bits() {
             return Err(Error::MessageTooLong);
@@ -229,7 +223,10 @@ pub fn elgamal_key_generate<R: RngCore + CryptoRng>(
     rng: &mut R,
     group: &ElgamalGroup,
 ) -> (ElgamalPublicKey, ElgamalPrivateKey) {
-    let (y,x) = key_generation(rng, group);
+    let (y, x) = key_generation(rng, group);
 
-    (ElgamalPublicKey::new(group.clone(), y), ElgamalPrivateKey::new(group.clone(), x, None))
+    (
+        ElgamalPublicKey::new(group.clone(), y),
+        ElgamalPrivateKey::new(group.clone(), x, None),
+    )
 }

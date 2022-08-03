@@ -4,5 +4,10 @@ mod formats;
 mod internal;
 mod keys;
 
-pub use keys::{ElgamalPrivateKey, ElgamalPublicKey, ElgamalGroup, ElgamalGroupElements, elgamal_key_generate};
-pub use formats::{private_key_encode, public_key_encode, PrivateKeyInfo, PublicKeyInfo, KeyInfo, GroupParams};
+pub use formats::{
+    private_key_decode, private_key_encode, public_key_decode, public_key_encode, GroupParams,
+    KeyInfo, PrivateKeyInfo, PublicKeyInfo,
+};
+pub use keys::{
+    elgamal_key_generate, ElgamalGroup, ElgamalGroupElements, ElgamalPrivateKey, ElgamalPublicKey,
+};

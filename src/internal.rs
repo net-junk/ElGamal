@@ -5,7 +5,7 @@ use num_traits::One;
 use rand_core::{CryptoRng, RngCore};
 
 use crate::error::{Error, Result};
-use crate::keys::{ElgamalPrivateKey, ElgamalPublicKey, ElgamalGroup, ElgamalGroupElements};
+use crate::keys::{ElgamalGroupElements, ElgamalPrivateKey, ElgamalPublicKey};
 
 use digest::DynDigest;
 
@@ -41,7 +41,6 @@ pub fn encrypt<R: RngCore + CryptoRng>(
     m: &BigUint,
 ) -> (BigUint, BigUint) {
     let r = rng.gen_biguint_range(&BigUint::one(), key.get_q());
-    println!("r: {}", r);
 
     encrypt_raw(m, key.get_p(), key.get_y(), key.get_g(), &r)
 }
@@ -67,12 +66,7 @@ pub fn decrypt(key: &ElgamalPrivateKey, a: &BigUint, b: &BigUint) -> Result<BigU
 }
 
 #[inline]
-pub fn verify(
-    key: &ElgamalPublicKey,
-    h: &BigUint,
-    r: &BigUint,
-    s: &BigUint,
-) -> Result<()> {
+pub fn verify(key: &ElgamalPublicKey, h: &BigUint, r: &BigUint, s: &BigUint) -> Result<()> {
     if s > key.get_q() || r > key.get_p() {
         return Err(Error::InvalidRange);
     }
@@ -189,8 +183,9 @@ mod test {
 
     use super::*;
     use crate::{
-        algorithms::{key_generation, elgamal_parameter_generation_type1},
+        algorithms::{elgamal_parameter_generation_type1, key_generation},
         keys::{ElgamalPrivateKey, ElgamalPublicKey},
+        ElgamalGroup,
     };
 
     fn generate_key<R: RngCore + CryptoRng>(
@@ -198,8 +193,8 @@ mod test {
         l: usize,
         k: usize,
     ) -> (ElgamalPublicKey, ElgamalPrivateKey) {
-        let (q,p, g) = elgamal_parameter_generation_type1(rng, l, k);
-        let group = ElgamalGroup::new(p,q, g);
+        let (q, p, g) = elgamal_parameter_generation_type1(rng, l, k);
+        let group = ElgamalGroup::new(p, q, g);
         let (y, x) = key_generation(rng, &group);
         let pubkey = ElgamalPublicKey::new(group.clone(), y);
         let privatekey = ElgamalPrivateKey::new(group, x, None);
