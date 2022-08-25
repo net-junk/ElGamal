@@ -1,6 +1,5 @@
 # ElGamal
-Collection of assymetric cipher algorithms written in pure Rust 
-
+ElGamal assymetric cryptosystem in pure Rust.
 
 ## Example
 
